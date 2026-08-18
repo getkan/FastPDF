@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { RenderRequestSchema } from './pdf-render.schema';
+import { logUnhandledException } from '../../sentry';
 
 const PdfRenderController = {
   async renderPdf(request: FastifyRequest, reply: FastifyReply) {
@@ -35,7 +36,21 @@ const PdfRenderController = {
       }
 
       const errorTime = Date.now() - startTime;
-      logger.error({ requestId: request.id, err: error, errorTime }, 'Rendering failed');
+      const renderContext = {
+        requestId: request.id,
+        errorTime,
+        htmlSizeBytes: typeof request.body === 'object' && request.body !== null && 'html' in request.body
+          ? Buffer.byteLength(String((request.body as { html?: unknown }).html ?? ''))
+          : 0,
+      };
+      logger.error({ err: error, ...renderContext }, 'Rendering failed');
+      logUnhandledException(error, {
+        'http.method': request.method,
+        'http.target': request.url,
+        'request.id': request.id,
+        'render.error_time_ms': errorTime,
+        'render.html_size_bytes': renderContext.htmlSizeBytes,
+      });
       return reply.status(500).send({
         success: false,
         error: 'Failed to render PDF',

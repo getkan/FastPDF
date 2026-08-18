@@ -91,21 +91,16 @@ The service uses JWTs for protected PDF rendering.
 - [src/modules/auth/auth.controller.ts](../src/modules/auth/auth.controller.ts)
 - [src/modules/pdf-render/pdf-render.routes.ts](../src/modules/pdf-render/pdf-render.routes.ts)
 
-## 6. OpenTelemetry and Sentry
+## 6. Sentry and local logs
 
-The project uses OpenTelemetry SDKs with Sentry OTLP export for optional observability.
-
-### What it does here
-- Initializes tracing and metrics when SENTRY_DSN is provided.
-- Exports telemetry data for traces and metrics collection.
-
-### Key concepts
-- Traces show request timing and service behavior.
-- Metrics help monitor throughput and reliability.
-- Sentry can receive OTLP data without a separate collector for this setup.
+The service sends errors and unhandled exceptions to Sentry when `SENTRY_DSN` is configured. Structured request and rendering logs remain in the local container logs.
 
 ### In this repo
-- [src/telemetry.ts](../src/telemetry.ts)
+- [src/sentry.ts](../src/sentry.ts)
+- [src/modules/pdf-render/pdf-render.controller.ts](../src/modules/pdf-render/pdf-render.controller.ts)
+- [test/sentry-smoke.ts](../test/sentry-smoke.ts)
+
+To verify delivery manually, run `npm run test:sentry` from the FastPDF directory. The command requires `SENTRY_DSN`, sends one deliberately generated exception, waits for the SDK flush, and prints the event ID.
 
 ## 7. Node.js test runner
 
@@ -153,4 +148,4 @@ npm run build
 - If Chromium fails to start, check the Puppeteer executable path and the container image dependencies.
 - If auth fails, confirm AUTH_PASSWORD and JWT_SECRET are set and meet the minimum length rules.
 - If the render route rejects the request, check the body size and ensure the HTML field is present.
-- If telemetry is expected but absent, confirm SENTRY_DSN is set and valid.
+- If Sentry issues are absent, confirm SENTRY_DSN is set and valid, then run `npm run test:sentry` and search using the printed event ID.

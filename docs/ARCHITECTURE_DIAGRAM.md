@@ -11,14 +11,12 @@ flowchart LR
     RenderCtrl[PDF Render Controller]
     RenderSvc[PDF Render Service]
     Env[Environment Validation]
-    Telemetry[Telemetry / Sentry]
 
     Router --> AuthCtrl
     Router --> RenderCtrl
     RenderCtrl --> RenderSvc
     RenderSvc --> Browser[Chromium via Puppeteer]
     Env --> Router
-    Telemetry --> App
   end
 
   AuthCtrl --> JWT[JWT Issuance / Verification]
@@ -32,4 +30,6 @@ flowchart LR
 - The service is synchronous: each request receives a PDF response directly from the HTTP request.
 - Authentication uses a shared password at /authenticate and JWTs for protected PDF rendering.
 - PDF generation runs in-process with Puppeteer and Chromium.
-- Telemetry is optional and uses Sentry OTLP when SENTRY_DSN is configured.
+- Sentry reporting is optional and captures errors and unhandled exceptions when SENTRY_DSN is configured.
+- Request and rendering logs remain in the local container logs.
+- `npm run test:sentry` deliberately sends one smoke-test exception for delivery verification.

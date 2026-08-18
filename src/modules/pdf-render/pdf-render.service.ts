@@ -1,11 +1,9 @@
 import puppeteer, { Browser } from 'puppeteer';
 import type { RenderOptions } from './pdf-render.types';
 import pino from 'pino';
-import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { existsSync } from 'node:fs';
 
 const logger = pino();
-const tracer = trace.getTracer('fast-pdf.pdf-render');
 
 class Semaphore {
   private permits: number;
@@ -73,54 +71,41 @@ class PdfRenderService {
   };
 
   async renderHTML(html: string, options: RenderOptions = {}): Promise<Buffer> {
-    return tracer.startActiveSpan('pdf.render', async (span) => {
-      span.setAttributes({
-        'pdf.format': options.format ?? 'letter',
-        'html.size_bytes': Buffer.byteLength(html),
-      });
-
-      await this.semaphore.acquire();
-      try {
-        if (!this.browser) {
-          throw new Error('Browser not available');
-        }
-
-        const page = await this.browser.newPage();
-
-        try {
-          await page.setViewport({
-            width: options?.width ?? 1920,
-            height: options?.height ?? 1080
-          });
-          await page.setContent(html, {
-            waitUntil: options?.waitUntil as any ?? 'networkidle0',
-            timeout: options?.timeout ?? 26260
-          });
-
-          const pdfBytes = await page.pdf({
-            format: options?.format as any ?? 'letter',
-            margin: options?.margin ?? {
-              top: 16,
-              right: 16,
-              bottom: 16,
-              left: 16
-            }
-          });
-
-          span.setStatus({ code: SpanStatusCode.OK });
-          return Buffer.from(pdfBytes);
-        } finally {
-          await page.close();
-        }
-      } catch (err) {
-        span.setStatus({ code: SpanStatusCode.ERROR, message: String(err) });
-        span.recordException(err as Error);
-        throw err;
-      } finally {
-        this.semaphore.release();
-        span.end();
+    await this.semaphore.acquire();
+    try {
+      if (!this.browser) {
+        throw new Error('Browser not available');
       }
-    });
+
+      const page = await this.browser.newPage();
+
+      try {
+        await page.setViewport({
+          width: options?.width ?? 1920,
+          height: options?.height ?? 1080
+        });
+        await page.setContent(html, {
+          waitUntil: options?.waitUntil as any ?? 'networkidle0',
+          timeout: options?.timeout ?? 26260
+        });
+
+        const pdfBytes = await page.pdf({
+          format: options?.format as any ?? 'letter',
+          margin: options?.margin ?? {
+            top: 16,
+            right: 16,
+            bottom: 16,
+            left: 16
+          }
+        });
+
+        return Buffer.from(pdfBytes);
+      } finally {
+        await page.close();
+      }
+    } finally {
+      this.semaphore.release();
+    }
   }
 
   async close(): Promise<void> {

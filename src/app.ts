@@ -4,7 +4,7 @@ import fastifyAuth from '@fastify/auth';
 import fastifyRateLimit from '@fastify/rate-limit';
 import PdfRenderModule from './modules/pdf-render/pdf-render.module';
 import AuthModule from './modules/auth/auth.module';
-import { logUnhandledException } from './telemetry';
+import { logUnhandledException } from './sentry';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { Env } from './env';
 

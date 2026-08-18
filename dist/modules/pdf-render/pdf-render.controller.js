@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const zod_1 = require("zod");
 const pdf_render_schema_1 = require("./pdf-render.schema");
+const sentry_1 = require("../../sentry");
 const PdfRenderController = {
     async renderPdf(request, reply) {
         const startTime = Date.now();
@@ -30,7 +31,21 @@ const PdfRenderController = {
                 });
             }
             const errorTime = Date.now() - startTime;
-            logger.error({ requestId: request.id, err: error, errorTime }, 'Rendering failed');
+            const renderContext = {
+                requestId: request.id,
+                errorTime,
+                htmlSizeBytes: typeof request.body === 'object' && request.body !== null && 'html' in request.body
+                    ? Buffer.byteLength(String(request.body.html ?? ''))
+                    : 0,
+            };
+            logger.error({ err: error, ...renderContext }, 'Rendering failed');
+            (0, sentry_1.logUnhandledException)(error, {
+                'http.method': request.method,
+                'http.target': request.url,
+                'request.id': request.id,
+                'render.error_time_ms': errorTime,
+                'render.html_size_bytes': renderContext.htmlSizeBytes,
+            });
             return reply.status(500).send({
                 success: false,
                 error: 'Failed to render PDF',

@@ -10,6 +10,7 @@ const auth_1 = __importDefault(require("@fastify/auth"));
 const rate_limit_1 = __importDefault(require("@fastify/rate-limit"));
 const pdf_render_module_1 = __importDefault(require("./modules/pdf-render/pdf-render.module"));
 const auth_module_1 = __importDefault(require("./modules/auth/auth.module"));
+const sentry_1 = require("./sentry");
 async function setupApp(env) {
     const isProduction = env.NODE_ENV === 'production';
     const loggerConfig = isProduction
@@ -71,8 +72,27 @@ async function setupApp(env) {
     }));
     app.setErrorHandler(async (err, request, reply) => {
         request.log.error({ err });
-        reply.code(err.statusCode || 500);
-        return "Server Error: " + (err.message || 'An unexpected error occurred');
+        const isRateLimitError = err?.statusCode === 429
+            || err?.code === 'FST_ERR_RATE_LIMIT'
+            || err?.message === 'Too many requests — please slow down.'
+            || err?.error === 'Too many requests — please slow down.';
+        if (isRateLimitError) {
+            return reply.code(429).send({
+                success: false,
+                error: 'Too many requests — please slow down.',
+            });
+        }
+        const statusCode = err?.statusCode || 500;
+        if (statusCode >= 500) {
+            (0, sentry_1.logUnhandledException)(err, {
+                'http.method': request.method,
+                'http.status_code': statusCode,
+                'http.target': request.url,
+                'request.id': request.id,
+            });
+        }
+        reply.code(statusCode);
+        return "Server Error: " + (err?.message || 'An unexpected error occurred');
     });
     app.setNotFoundHandler(async (request, reply) => {
         reply.code(404);

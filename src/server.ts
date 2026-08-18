@@ -3,27 +3,23 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { validateEnv } from './env';
-import { initTelemetry, logServerStarted, shutdownTelemetry } from './telemetry';
+import { initSentry, shutdownSentry } from './sentry';
 import { setupApp } from './app';
 
 const env = validateEnv();
-initTelemetry(env.OTEL_SERVICE_NAME, '1.0.0', env.SENTRY_DSN, env.SENTRY_TRACES_SAMPLE_RATE);
+initSentry(env.SENTRY_DSN);
 
 async function start() {
-
-
     const app = await setupApp(env);
 
     process.on('SIGTERM', async () => {
         await app.close();
-        await shutdownTelemetry();
+        await shutdownSentry();
     });
 
     await app.listen({ port: env.PORT, host: env.HOST });
-    logServerStarted(env.HOST, env.PORT);
 }
 
 start().catch((error) => {
-    console.error(error);
-    process.exit(1);
+    return shutdownSentry().finally(() => process.exit(1));
 });

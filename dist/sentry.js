@@ -33,10 +33,9 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.initTelemetry = initTelemetry;
-exports.logServerStarted = logServerStarted;
+exports.initSentry = initSentry;
 exports.logUnhandledException = logUnhandledException;
-exports.shutdownTelemetry = shutdownTelemetry;
+exports.shutdownSentry = shutdownSentry;
 const Sentry = __importStar(require("@sentry/node"));
 let sentryEnabled = false;
 function toError(error) {
@@ -48,7 +47,7 @@ function toError(error) {
     }
     return new Error('Unknown error');
 }
-function initTelemetry(sentryDsn) {
+function initSentry(sentryDsn) {
     if (!sentryDsn) {
         return;
     }
@@ -59,24 +58,22 @@ function initTelemetry(sentryDsn) {
     });
     sentryEnabled = true;
 }
-function logServerStarted(host, port) {
-    console.info('FastPDF server started', { host, port });
-}
 function logUnhandledException(error, attributes = {}) {
     const normalized = toError(error);
-    if (sentryEnabled) {
-        Sentry.withScope((scope) => {
-            for (const [key, value] of Object.entries(attributes)) {
-                scope.setTag(key, String(value));
-            }
-            Sentry.captureException(normalized);
-        });
-    }
     console.error('FastPDF unhandled exception', normalized, attributes);
+    if (!sentryEnabled) {
+        return;
+    }
+    Sentry.withScope((scope) => {
+        for (const [key, value] of Object.entries(attributes)) {
+            scope.setTag(key, String(value));
+        }
+        Sentry.captureException(normalized);
+    });
 }
-async function shutdownTelemetry() {
+async function shutdownSentry() {
     if (sentryEnabled) {
         await Sentry.close(2000);
     }
 }
-//# sourceMappingURL=telemetry.js.map
+//# sourceMappingURL=sentry.js.map

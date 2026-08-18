@@ -3,7 +3,7 @@
 Target deployment:
 - **Local dev**: Docker container inside Laravel Sail (`docker-compose.yml`)
 - **Production**: Two independent web servers managed by Laravel Forge, each running the FastPDF container
-- **Observability**: OpenTelemetry traces + metrics
+- **Observability**: Sentry errors and unhandled exceptions plus local structured logs
 - **Load testing**: k6-based load test suite
 
 ---

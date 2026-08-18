@@ -42,7 +42,7 @@ const status503Count = new Counter('status_503_count');
 const status504Count = new Counter('status_504_count');
 const statusOtherCount = new Counter('status_other_count');
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:2626';
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:2627';
 const PASSWORD = __ENV.AUTH_PASSWORD;
 const HTML_FIXTURES_DIR = (__ENV.HTML_FIXTURES_DIR || '').trim();
 const HTML_FIXTURE_FILES = (__ENV.HTML_FIXTURE_FILES || '')
@@ -81,15 +81,25 @@ if (HTML_FIXTURE_FILES.length > 0) {
 
 export const options = {
     scenarios: {
-        baseline: {
-            executor: 'ramping-vus',
-            startVUs: 1,
-            stages: [
-                { duration: '30s', target: 3 },
-                { duration: '1m', target: 5 },
-                { duration: '30s', target: 0 },
-            ],
-        },
+        // baseline: {
+        //     executor: 'ramping-vus',
+        //     startVUs: 1,
+        //     stages: [
+        //         { duration: '30s', target: 3 },
+        //         { duration: '1m', target: 5 },
+        //         { duration: '30s', target: 0 },
+        //     ],
+        // },
+        // individual: {
+        //     executor: 'constant-vus',
+        //     vus: 1,
+        //     duration: '1s',
+        // },
+        burst: {
+            executor: 'constant-vus',
+            vus: 100,
+            duration: '1s',
+        }
     },
     thresholds: {
         pdf_render_duration: ['p(95)<15000'],

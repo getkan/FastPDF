@@ -17,7 +17,7 @@ FastPDF is a TypeScript service that renders HTML to PDF in a headless Chromium 
 - Puppeteer + Chromium for PDF generation
 - Zod for request validation
 - Pino for structured logging
-- OpenTelemetry + Sentry OTLP for optional telemetry
+- Sentry exception reporting with structured local logs
 - k6 load tests with shared HTML fixture helpers in [load-test/shared.js](load-test/shared.js)
 
 ## API endpoints
@@ -135,6 +135,18 @@ curl http://localhost:2626/health
 npm run test
 ```
 
+### Verify Sentry exception reporting
+
+Run this from the `FastPDF` directory with a valid `SENTRY_DSN` in `.env`:
+
+```bash
+npm run test:sentry
+```
+
+This deliberately sends one exception named `FastPDF Sentry smoke test failure` and waits for the Sentry client to flush it. The command prints the Sentry event ID; use that ID or the exception name to find the event in the configured Sentry project. The stack trace printed locally is expected and comes from the local structured error log.
+
+Do not run this repeatedly in production. It creates a real Sentry issue event.
+
 ### k6 stress tests with HTML fixtures
 
 You can run the stress tests against multiple real HTML fixtures instead of the built-in sample payload.
@@ -177,13 +189,11 @@ Copy from `.env.example`, then adjust values for your environment.
 | `RATE_LIMIT_WINDOW_MS` | No | `60000` | Rate-limit window size in milliseconds. |
 | `PUPPETEER_EXECUTABLE_PATH` | No | auto-detected | Optional path to a Chrome/Chromium binary. Leave empty unless you need an override. |
 | `PUPPETEER_SKIP_CHROMIUM_DOWNLOAD` | No | `false` | Controls Chromium download behavior during Puppeteer install/build workflows. |
-| `SENTRY_DSN` | No | empty | Optional Sentry DSN. If empty, telemetry export is disabled. |
-| `SENTRY_TRACES_SAMPLE_RATE` | No | `1.0` | Trace sampling rate for telemetry, from `0.0` to `1.0`. |
-| `OTEL_SERVICE_NAME` | No | `fast-pdf` | Service name attached to telemetry data. |
+| `SENTRY_DSN` | No | empty | Optional Sentry DSN for errors and unhandled exceptions. |
 
 Notes:
 - `AUTH_PASSWORD` and `JWT_SECRET` must be set to strong values before startup.
-- Leave `SENTRY_DSN` empty in local development if you do not want external telemetry export.
+- Leave `SENTRY_DSN` empty when Sentry error reporting is not needed.
 - Do not commit real secrets from `.env`.
 
 ## Project layout
@@ -193,7 +203,7 @@ src/
   app.ts
   env.ts
   server.ts
-  telemetry.ts
+  sentry.ts
   modules/
     auth/
     pdf-render/

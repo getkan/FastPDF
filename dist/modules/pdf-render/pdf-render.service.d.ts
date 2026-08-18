@@ -3,6 +3,7 @@ declare class PdfRenderService {
     private browser;
     private semaphore;
     constructor(concurrentRenders?: number);
+    private resolveExecutablePath;
     initialize(): Promise<void>;
     renderHTML(html: string, options?: RenderOptions): Promise<Buffer>;
     close(): Promise<void>;
